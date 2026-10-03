@@ -11,6 +11,14 @@
 
 ---
 
+## Link App : 
+https://nabilahbunga26.github.io/PRAKTIKUM5GRAFKOMBKelompokPemula/
+
+## Link Video :
+https://drive.google.com/drive/folders/1znNrzhq_4JeXKx_NLSS80ThEklAczQW0?usp=sharing
+
+<img width="1490" height="897" alt="image" src="https://github.com/user-attachments/assets/6cf27514-8090-4c33-a577-f890c2825217" />
+
 ## 1. Deskripsi Aplikasi
 
 Playground **WebGL2** untuk mengamati bagaimana **normal, texture (UV), point light, dan camera** memengaruhi tampilan permukaan objek 3D. Objek berputar otomatis dan dirender dengan satu shader program:
