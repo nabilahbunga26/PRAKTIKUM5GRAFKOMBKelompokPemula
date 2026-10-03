@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Textured and Lit Object Playground — Praktikum 5 | Kelompok Pemula</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <p class="eyebrow">PRAKTIKUM 05 · LIGHTING, SHADING &amp; TEXTURE — EF234504 Grafika Komputer · Pertemuan 5</p>
+    <h1>Textured and Lit Object Playground</h1>
+  </div>
+  <span id="statusBadge" class="status-badge">RUNNING · LIGHTING ON</span>
+</header>
+
+<div class="wrap">
+
+  <section class="block pink">
+    <span class="tag">Kelompok Pemula</span>
+    <h2>Identitas Kelompok</h2>
+    <div class="team-grid">
+      <div class="team-card">Nabilah Bunga Sulistia<small>NRP 5025241073</small></div>
+      <div class="team-card">Callista Fidelya Roba Gultom<small>NRP 5025241086</small></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <span class="tag">Bagian 1</span>
+    <h2>Deskripsi</h2>
+    <p>Pertemuan 4 menjawab <strong>di mana</strong> objek berada (Model → View → Projection). Pertemuan 5 menjawab <strong>bagaimana permukaan objek terlihat</strong>. Tiap vertex sekarang membawa <strong>position + normal + UV</strong>; fragment shader memakai ketiganya untuk <strong>texture sampling</strong> dan model pencahayaan Phong sederhana (<strong>ambient + diffuse + specular</strong>) per fragment.</p>
+    <p>Amati hubungan normal, texture, point light, camera, dan fragment shading. Detail modul: <a href="https://darlis-its.github.io/materi-grafika-komputer/" target="_blank" rel="noopener">darlis-its.github.io/materi-grafika-komputer</a> — Pertemuan 5, Praktikum.</p>
+  </section>
+
+  <section class="block rose">
+    <span class="tag">Bagian 2</span>
+    <h2>Alur Kerja</h2>
+    <div class="pipeline">GEOMETRY (Kubus / Torus / Torus Knot / Bola)
+      |
+      v
+POSITION + NORMAL + UV  (3 buffer di 1 VAO per mode flat / smooth)
+      |
+      v
+VERTEX SHADER
+   |- transform position  (Projection x View x Model)
+   |- transform normal    (Normal Matrix = inverse-transpose Model)
+   '- teruskan UV (x u_uvScale)
+      |
+      v
+INTERPOLATION  (world position, normal, UV per fragment)
+      |
+      v
+FRAGMENT SHADER
+   |- normalize(normal)
+   |- texture sampling (u_texture)
+   |- ambient  = ambientStrength x texColor
+   |- diffuse  = max(dot(N, L), 0) x lightColor x texColor
+   '- specular = pow(max(dot(R, V), 0), shininess) x lightColor
+      |
+      v
+FINAL SURFACE COLOR -> PIXEL DI CANVAS</div>
+  </section>
+
+  <section class="block">
+    <span class="tag">Bagian 3</span>
+    <h2>Syarat Wajib &amp; Cara Memenuhinya</h2>
+    <ul class="checklist">
+      <li><strong>Objek 3D + animasi</strong> — kubus (default), torus, torus knot, dan bola berputar otomatis; <span class="keycap">P</span> menghentikan/melanjutkan rotasi.</li>
+      <li><strong>Position, normal, UV attribute</strong> — <code class="pill">a_position</code>, <code class="pill">a_normal</code>, <code class="pill">a_texCoord</code>; normal flat &amp; smooth disiapkan sebagai dua buffer berbeda di atas geometry yang sama.</li>
+      <li><strong>Normal Matrix &amp; normalisasi</strong> — <code class="pill">u_normalMatrix</code> (inverse-transpose) dan <code class="pill">normalize(v_normal)</code> di fragment shader; slider <em>Non-uniform scale</em> menunjukkan kenapa perlu.</li>
+      <li><strong>Ambient + diffuse + specular</strong> — dihitung per fragment, masing-masing bisa di-ON/OFF lewat checkbox <em>Lighting components</em>.</li>
+      <li><strong>Point light interaktif</strong> — Arrow = light X/Y, <span class="keycap">W</span>/<span class="keycap">S</span> = light Z, slider X/Y/Z, dan <span class="keycap">L</span> untuk light orbit.</li>
+      <li><strong>Texture + filtering + wrapping</strong> — checkerboard programatik atau image (<code class="pill">assets/texture.png</code>); filtering NEAREST / LINEAR / LINEAR_MIPMAP; wrapping REPEAT / CLAMP_TO_EDGE (UV scale &gt; 1 supaya kelihatan).</li>
+      <li><strong>Camera-aware specular</strong> — <span class="keycap">Q</span>/<span class="keycap">E</span> menggeser camera di X, tombol <em>Camera Orbit</em> memutar camera mengelilingi objek.</li>
+      <li><strong>Toggle &amp; HUD</strong> — <span class="keycap">F</span> flat/smooth, <span class="keycap">T</span> texture, <span class="keycap">R</span> reset; HUD menampilkan shading, light, texture, filtering, wrapping, dan camera.</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <span class="tag">Bagian 4</span>
+    <h2>Playground</h2>
+
+    <div class="workspace">
+      <div class="control-panel">
+        <h3 class="panel-title">PARAMETER CONTROL</h3>
+
+        <div class="field">
+          <label for="shapeSelect">Bentuk objek</label>
+          <select id="shapeSelect">
+            <option value="cube">Kubus</option>
+            <option value="torus">Torus</option>
+            <option value="knot">Torus Knot</option>
+            <option value="sphere">Bola</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="range-row"><span>Ambient strength</span><output id="ambientOut">0.18</output></div>
+          <input id="ambientRange" type="range" min="0" max="1" step="0.01" value="0.18">
+        </div>
+
+        <div class="field">
+          <div class="range-row"><span>Shininess</span><output id="shininessOut">32</output></div>
+          <input id="shininessRange" type="range" min="2" max="128" step="1" value="32">
+        </div>
+
+        <div class="field">
+          <div class="range-row"><span>UV Scale</span><output id="uvOut">1.00</output></div>
+          <input id="uvRange" type="range" min="0.25" max="5" step="0.05" value="1">
+        </div>
+
+        <div class="field subgroup">
+          <span class="field-label">Light position</span>
+          <div class="range-row"><span>X</span><output id="lightXOut">2.00</output></div>
+          <input id="lightX" type="range" min="-6" max="6" step="0.05" value="2">
+          <div class="range-row"><span>Y</span><output id="lightYOut">2.00</output></div>
+          <input id="lightY" type="range" min="-6" max="6" step="0.05" value="2">
+          <div class="range-row"><span>Z</span><output id="lightZOut">3.00</output></div>
+          <input id="lightZ" type="range" min="-6" max="6" step="0.05" value="3">
+        </div>
+
+        <div class="btn-row">
+          <button id="shadingBtn" class="ctrl">Flat / Smooth (F)</button>
+          <button id="textureBtn" class="ctrl on">Texture (T)</button>
+          <button id="lightOrbitBtn" class="ctrl">Light Orbit (L)</button>
+          <button id="cameraOrbitBtn" class="ctrl">Camera Orbit</button>
+          <button id="rotateBtn" class="ctrl wide">Stop Object Rotation (P)</button>
+        </div>
+
+        <div class="field">
+          <label for="textureSource">Texture source</label>
+          <select id="textureSource">
+            <option value="checker">Checkerboard</option>
+            <option value="image">Image texture</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="filterSelect">Filtering</label>
+          <select id="filterSelect">
+            <option value="LINEAR">LINEAR</option>
+            <option value="NEAREST">NEAREST</option>
+            <option value="LINEAR_MIPMAP">LINEAR_MIPMAP</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="wrapSelect">Wrapping</label>
+          <select id="wrapSelect">
+            <option value="REPEAT">REPEAT</option>
+            <option value="CLAMP_TO_EDGE">CLAMP_TO_EDGE</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Lighting components</span>
+          <label class="check-row"><input id="compAmbient" type="checkbox" checked> Ambient</label>
+          <label class="check-row"><input id="compDiffuse" type="checkbox" checked> Diffuse</label>
+          <label class="check-row"><input id="compSpecular" type="checkbox" checked> Specular</label>
+        </div>
+
+        <div class="field subgroup">
+          <span class="field-label">Non-uniform scale</span>
+          <div class="range-row"><span>X</span><output id="scaleXOut">1.00</output></div>
+          <input id="scaleX" type="range" min="0.3" max="2" step="0.05" value="1">
+          <div class="range-row"><span>Y</span><output id="scaleYOut">1.00</output></div>
+          <input id="scaleY" type="range" min="0.3" max="2" step="0.05" value="1">
+          <div class="range-row"><span>Z</span><output id="scaleZOut">1.00</output></div>
+          <input id="scaleZ" type="range" min="0.3" max="2" step="0.05" value="1">
+        </div>
+
+        <button id="resetBtn" class="ctrl danger">Reset Scene (R)</button>
+
+        <dl class="keys-help">
+          <dt>Arrow</dt><dd>Light X / Y</dd>
+          <dt>W / S</dt><dd>Light Z</dd>
+          <dt>Q / E</dt><dd>Camera X</dd>
+          <dt>F</dt><dd>Flat / Smooth</dd>
+          <dt>T</dt><dd>Texture on/off</dd>
+          <dt>L</dt><dd>Light orbit</dd>
+          <dt>P</dt><dd>Stop / resume rotasi</dd>
+          <dt>R</dt><dd>Reset</dd>
+        </dl>
+      </div>
+
+      <div class="canvas-panel">
+        <div class="stage-wrap">
+          <canvas id="glCanvas" width="960" height="600"></canvas>
+        </div>
+        <div class="hud-bar" id="hud">
+          <span class="hud-chip">Shading: <b id="hudShading">FLAT</b></span>
+          <span class="hud-chip">Light: <b id="hudLight">(2.00, 2.00, 3.00)</b></span>
+          <span class="hud-chip">Texture: <b id="hudTexture">CHECKER</b></span>
+          <span class="hud-chip">Filtering: <b id="hudFilter">LINEAR</b></span>
+          <span class="hud-chip">Wrapping: <b id="hudWrap">REPEAT</b></span>
+          <span class="hud-chip">Camera: <b id="hudCamera">ORBIT OFF</b></span>
+          <span class="hud-chip">Shininess: <b id="hudShininess">32</b></span>
+          <span class="hud-chip">UV Scale: <b id="hudUv">1.00</b></span>
+        </div>
+        <p class="keyboard-note"><strong>Keyboard</strong> — Arrow: light X/Y · W/S: light Z · Q/E: camera X · F: flat/smooth · T: texture · L: light orbit · R: reset · P: stop/resume object rotation</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block rose">
+    <span class="tag">Bagian 5</span>
+    <h2>Penjelasan Objek</h2>
+    <h3>1. Kubus, Torus, Torus Knot, Bola</h3>
+    <p>Semua bentuk dibangun sebagai deretan triangle <em>non-indexed</em>, jadi tiap bentuk punya dua set normal: <strong>flat</strong> (satu normal per triangle) dan <strong>smooth</strong> (satu normal per vertex). Posisi dan UV sama persis; yang berbeda hanya buffer normal yang di-bind lewat VAO. Pada kubus, normal smooth diambil dari arah pusat menuju sudut, sehingga kubus tampak membulat.</p>
+    <h3>2. Normal &amp; Normal Matrix</h3>
+    <p>Normal harus ikut ditransformasikan, tapi bukan dengan Model Matrix biasa. Saat <em>non-uniform scale</em> (mis. X=1.8, Y=0.6), normal yang dikali Model Matrix tidak lagi tegak lurus permukaan. <code class="pill">u_normalMatrix</code> (inverse-transpose bagian 3×3 Model Matrix) memperbaikinya, lalu <code class="pill">normalize()</code> di fragment shader mengembalikan panjang vector ke 1.</p>
+    <h3>3. Point Light &amp; Camera</h3>
+    <p>Light digambar sebagai kubus kecil tanpa lighting di posisinya. <code class="pill">L = normalize(lightPos - worldPos)</code> menentukan diffuse; <code class="pill">V = normalize(cameraPos - worldPos)</code> menentukan specular, sehingga highlight ikut bergeser ketika camera bergerak walau light diam.</p>
+    <h3>4. Texture, Filtering, Wrapping</h3>
+    <p>Texture dipakai sebagai <em>base color</em> lalu dikali kontribusi cahaya. NEAREST terlihat tajam/pixelated, LINEAR memperhalus, LINEAR_MIPMAP memakai mipmap saat texture terlihat jauh. Wrapping baru terlihat jika UV keluar 0–1, makanya ada slider <strong>UV Scale</strong>: REPEAT mengulang pola, CLAMP_TO_EDGE menarik piksel tepi.</p>
+  </section>
+
+  <section class="block">
+    <span class="tag">Bagian 6</span>
+    <h2>Cuplikan GLSL (WebGL2, ES 3.00)</h2>
+    <p><strong>Vertex Shader</strong> — transform posisi &amp; normal, teruskan world position dan UV:</p>
+    <div class="pipeline">#version 300 es
+in vec3 a_position;
+in vec3 a_normal;
+in vec2 a_texCoord;
+
+uniform mat4 u_model;
+uniform mat4 u_view;
+uniform mat4 u_projection;
+uniform mat3 u_normalMatrix;
+uniform float u_uvScale;
+
+out vec3 v_worldPosition;
+out vec3 v_normal;
+out vec2 v_texCoord;
+
+void main() {
+  vec4 worldPosition = u_model * vec4(a_position, 1.0);
+  v_worldPosition = worldPosition.xyz;
+  v_normal        = u_normalMatrix * a_normal;
+  v_texCoord      = a_texCoord * u_uvScale;
+  gl_Position     = u_projection * u_view * worldPosition;
+}</div>
+    <p><strong>Fragment Shader</strong> — texture sebagai base color, lalu ambient + diffuse + specular:</p>
+    <div class="pipeline">vec3 N = normalize(v_normal);
+vec3 L = normalize(u_lightPosition  - v_worldPosition);
+vec3 V = normalize(u_cameraPosition - v_worldPosition);
+
+float diff = max(dot(N, L), 0.0);
+vec3  R    = reflect(-L, N);
+float spec = (diff > 0.0) ? pow(max(dot(R, V), 0.0), u_shininess) : 0.0;
+
+vec3 base     = texture(u_texture, v_texCoord).rgb;
+vec3 ambient  = u_ambientStrength * base;
+vec3 diffuse  = diff * u_lightColor * base;
+vec3 specular = spec * u_lightColor;
+
+outColor = vec4(ambient + diffuse + specular, 1.0);</div>
+  </section>
+
+  <section class="block">
+    <span class="tag">Bagian 7</span>
+    <h2>Ringkasan</h2>
+    <p>Praktikum ini mengubah objek 3D Pertemuan 4 menjadi permukaan dengan informasi visual lebih kaya: <strong>position</strong> menentukan <em>di mana</em> permukaan, <strong>normal</strong> menentukan <em>ke mana</em> permukaan menghadap, <strong>UV</strong> menentukan <em>bagian texture</em> yang dipakai, <strong>lighting</strong> menentukan <em>bagaimana cahaya</em> memengaruhi permukaan, dan <strong>texture</strong> memberi detail dasar tanpa menambah triangle. Semuanya dijalankan di satu shader program dan menjadi penutup rangkaian WebGL low-level sebelum Introduction to Three.js.</p>
+  </section>
+
+</div>
+
+<footer>Praktikum 5 — Grafika Komputer — ITS Surabaya — Kelompok Pemula</footer>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+in vec3 a_position;
+in vec3 a_normal;
+in vec2 a_texCoord;
+
+uniform mat4 u_model;
+uniform mat4 u_view;
+uniform mat4 u_projection;
+uniform mat3 u_normalMatrix;
+uniform float u_uvScale;
+
+out vec3 v_worldPosition;
+out vec3 v_normal;
+out vec2 v_texCoord;
+
+void main() {
+  vec4 worldPosition = u_model * vec4(a_position, 1.0);
+  v_worldPosition = worldPosition.xyz;
+  v_normal        = u_normalMatrix * a_normal;
+  v_texCoord      = a_texCoord * u_uvScale;
+  gl_Position     = u_projection * u_view * worldPosition;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+#version 300 es
+precision highp float;
+
+in vec3 v_worldPosition;
+in vec3 v_normal;
+in vec2 v_texCoord;
+
+uniform vec3  u_lightPosition;
+uniform vec3  u_lightColor;
+uniform vec3  u_cameraPosition;
+uniform float u_ambientStrength;
+uniform float u_shininess;
+uniform sampler2D u_texture;
+
+uniform bool u_useTexture;
+uniform bool u_useAmbient;
+uniform bool u_useDiffuse;
+uniform bool u_useSpecular;
+uniform bool u_unlit;
+
+out vec4 outColor;
+
+void main() {
+  if (u_unlit) {            // penanda posisi light
+    outColor = vec4(u_lightColor, 1.0);
+    return;
+  }
+
+  vec3 N = normalize(v_normal);
+  vec3 L = normalize(u_lightPosition  - v_worldPosition);
+  vec3 V = normalize(u_cameraPosition - v_worldPosition);
+
+  float diff = max(dot(N, L), 0.0);
+  vec3  R    = reflect(-L, N);
+
+  float spec = 0.0;
+  if (diff > 0.0) {
+    spec = pow(max(dot(R, V), 0.0), u_shininess);
+  }
+
+  vec3 base = u_useTexture
+    ? texture(u_texture, v_texCoord).rgb
+    : vec3(1.0, 0.86, 0.93);
+
+  vec3 ambient  = u_useAmbient  ? u_ambientStrength * base         : vec3(0.0);
+  vec3 diffuse  = u_useDiffuse  ? diff * u_lightColor * base       : vec3(0.0);
+  vec3 specular = u_useSpecular ? spec * u_lightColor              : vec3(0.0);
+
+  outColor = vec4(ambient + diffuse + specular, 1.0);
+}
+</script>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
